@@ -471,3 +471,52 @@ body::after {
 .anim-flash {
   animation: flash 2s ease-in-out infinite;
 }
+
+/* Mobile Responsiveness */
+@media (max-width: 600px) {
+  .app-container {
+    padding: 1rem 1rem;
+    gap: 1rem;
+  }
+  
+  .glass-panel {
+    padding: 1.25rem;
+  }
+
+  .city-name {
+    font-size: 2rem;
+  }
+
+  .current-temp {
+    font-size: 4rem;
+  }
+
+  .weather-icon-large {
+    width: 80px;
+    height: 80px;
+  }
+
+  .details-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+
+  .detail-item {
+    padding: 1rem 0.75rem;
+    flex-direction: column;
+    text-align: center;
+    gap: 0.5rem;
+  }
+
+  .detail-value {
+    font-size: 1.1rem;
+  }
+
+  .forecast-item {
+    padding: 0.75rem;
+  }
+
+  .hourly-container {
+    gap: 1rem;
+  }
+}
