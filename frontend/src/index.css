@@ -1,13 +1,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 :root {
-  --bg-color: #4c1d95; /* Vibrant violet */
-  --text-primary: #f8fafc;
-  --text-secondary: #ddd6fe; /* Light violet for secondary text */
-  --glass-bg: rgba(76, 29, 149, 0.4);
+  --bg-color: #0f172a; /* Deep slate base */
+  --text-primary: #ffffff;
+  --text-secondary: #cbd5e1;
+  --glass-bg: rgba(255, 255, 255, 0.05);
   --glass-border: rgba(255, 255, 255, 0.15);
-  --accent-color: #c084fc; /* Bright purple accent */
-  --gradient-primary: linear-gradient(135deg, #c084fc 0%, #a855f7 100%);
+  --glass-highlight: rgba(255, 255, 255, 0.3);
+  --accent-color: #38bdf8; /* Liquid cyan accent */
+  --gradient-primary: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
 }
 
 * {
@@ -21,16 +22,51 @@ body {
   background-color: var(--bg-color);
   color: var(--text-primary);
   min-height: 100vh;
-  /* Premium animated background gradient */
-  background: 
-    radial-gradient(circle at 15% 50%, rgba(192, 132, 252, 0.25), transparent 35%),
-    radial-gradient(circle at 85% 30%, rgba(168, 85, 247, 0.25), transparent 35%),
-    radial-gradient(circle at 50% 80%, rgba(126, 34, 206, 0.3), transparent 40%);
-  background-color: var(--bg-color);
-  background-attachment: fixed;
+  /* Liquid animated background */
+  background: linear-gradient(45deg, #0f172a, #1e1b4b, #0c4a6e, #172554);
+  background-size: 400% 400%;
+  animation: liquid-bg 15s ease infinite;
   display: flex;
   justify-content: center;
   position: relative;
+}
+
+@keyframes liquid-bg {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Base floating orbs for extra liquid feel */
+body::before, body::after {
+  content: "";
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(80px);
+  z-index: -1;
+  animation: float-orb 20s ease-in-out infinite alternate;
+}
+
+body::before {
+  width: 50vw;
+  height: 50vw;
+  background: rgba(56, 189, 248, 0.15); /* Cyan */
+  top: -10%;
+  left: -10%;
+}
+
+body::after {
+  width: 40vw;
+  height: 40vw;
+  background: rgba(129, 140, 248, 0.15); /* Indigo */
+  bottom: -10%;
+  right: -10%;
+  animation-delay: -10s;
+}
+
+@keyframes float-orb {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(10vw, 15vh) scale(1.2); }
 }
 
 /* Weather Effects Container */
@@ -119,21 +155,23 @@ body {
   gap: 1.5rem;
 }
 
-/* Glassmorphism */
+/* Liquid Glassmorphism */
 .glass-panel {
   background: var(--glass-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
   border: 1px solid var(--glass-border);
+  border-top: 1px solid var(--glass-highlight);
+  border-left: 1px solid var(--glass-highlight);
   border-radius: 24px;
   padding: 1.5rem;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 15px 35px 0 rgba(0, 0, 0, 0.2), inset 0 0 15px rgba(255,255,255,0.05);
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
 }
 
 .glass-panel:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.3);
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 20px 45px 0 rgba(0, 0, 0, 0.3), inset 0 0 20px rgba(255,255,255,0.1);
 }
 
 .header {
