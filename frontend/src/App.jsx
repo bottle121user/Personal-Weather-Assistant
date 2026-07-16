@@ -260,6 +260,26 @@ function App() {
               <span className="detail-label">Precipitation</span>
               <span className="detail-value">{current?.precipitation} mm</span>
             </div>
+        </div>
+
+        <div className="glass-panel animate-in delay-3" style={{ padding: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
+            <CloudRain size={24} color="var(--accent-color)" className="anim-bounce" />
+            <span style={{ fontSize: '1.2rem', fontWeight: 700 }}>Chance of Rain Today</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+            <div style={{ flex: 1, height: '16px', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
+              <div style={{ 
+                height: '100%', 
+                width: `${weatherData?.daily?.precipitation_probability_max?.[0] || 0}%`, 
+                background: 'var(--gradient-primary)',
+                borderRadius: '12px',
+                transition: 'width 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+              }} />
+            </div>
+            <span style={{ fontSize: '1.75rem', fontWeight: 800, minWidth: '70px', textAlign: 'right', color: 'var(--text-primary)' }}>
+              {weatherData?.daily?.precipitation_probability_max?.[0] || 0}%
+            </span>
           </div>
         </div>
 
