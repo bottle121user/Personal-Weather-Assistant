@@ -155,6 +155,25 @@ function App() {
 
   const current = weatherData?.current;
 
+  const getNext24Hours = (hourlyData) => {
+    if (!hourlyData) return [];
+    const now = new Date();
+    // Find index for the current hour
+    const currentIndex = hourlyData.time.findIndex(timeStr => new Date(timeStr) >= now);
+    const startIdx = currentIndex !== -1 ? currentIndex : 0;
+    
+    return Array.from({ length: 24 }).map((_, i) => {
+      const idx = startIdx + i;
+      if (idx >= hourlyData.time.length) return null;
+      return {
+        time: hourlyData.time[idx],
+        temp: hourlyData.temperature_2m[idx],
+        code: hourlyData.weather_code[idx],
+        precip: hourlyData.precipitation_probability[idx]
+      };
+    }).filter(Boolean);
+  };
+
   return (
     <>
       <WeatherEffects code={current?.weather_code} />
@@ -243,6 +262,34 @@ function App() {
             </div>
           </div>
         </div>
+
+        {weatherData?.hourly && (
+          <div className="glass-panel animate-in delay-3" style={{ padding: '1.25rem' }}>
+            <div className="title" style={{ marginBottom: '1rem', fontSize: '1rem' }}>Hourly Forecast</div>
+            <div className="hourly-container">
+              {getNext24Hours(weatherData.hourly).map((hour, index) => {
+                const date = new Date(hour.time);
+                let timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', hour12: true });
+                if (timeStr === '12 AM') timeStr = '12 AM'; // format cleanup if needed
+                
+                // Determine if it's day or night for the icon based on hour (rough estimate: 6 AM to 6 PM is day)
+                const h = date.getHours();
+                const isDay = h >= 6 && h < 18;
+
+                return (
+                  <div key={hour.time} className="hourly-item">
+                    <span className="hourly-time">{index === 0 ? 'Now' : timeStr}</span>
+                    {getWeatherIcon(hour.code, isDay, 'small')}
+                    <span className="hourly-temp">{Math.round(hour.temp)}°</span>
+                    <div style={{fontSize: '0.65rem', color: 'var(--accent-color)', display: 'flex', alignItems: 'center', gap: '2px', fontWeight: 600, marginTop: '2px'}}>
+                      <Droplets size={10} /> {hour.precip}%
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <div className="glass-panel animate-in delay-4">
           <div className="title" style={{ marginBottom: '1rem' }}>7-Day Forecast</div>
