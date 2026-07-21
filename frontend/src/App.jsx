@@ -11,7 +11,9 @@ import {
   CloudLightning,
   CloudSnow,
   Thermometer,
-  Info
+  Info,
+  RefreshCw,
+  Bot
 } from 'lucide-react';
 import './index.css';
 
@@ -26,6 +28,33 @@ const getWeatherIcon = (code, isDay, size = 'large') => {
   return <Cloud className={`${baseClass} anim-float`} />;
 };
 
+const getDetailedWeatherIcons = (code, isDay, size = 'small') => {
+  const baseClass = size === 'large' ? 'weather-icon-large' : 'weather-icon-small';
+  const icons = [];
+  
+  if (isDay && code !== 3 && code !== 65 && code !== 67 && code !== 75 && code !== 77) {
+    icons.push(<Sun key="sun" className={`${baseClass} anim-spin-slow`} style={{ color: '#fcd34d' }} />);
+  }
+  
+  if (code >= 1) {
+    icons.push(<Cloud key="cloud" className={`${baseClass} anim-float`} style={{ color: '#e2e8f0' }} />);
+  }
+  
+  if (code >= 51 && code <= 67) {
+    icons.push(<CloudRain key="rain" className={`${baseClass} anim-bounce`} style={{ color: '#38bdf8' }} />);
+  } else if (code >= 71 && code <= 77) {
+    icons.push(<CloudSnow key="snow" className={`${baseClass} anim-sway`} style={{ color: '#ffffff' }} />);
+  } else if (code >= 95 && code <= 99) {
+    icons.push(<CloudLightning key="lightning" className={`${baseClass} anim-flash`} style={{ color: '#a78bfa' }} />);
+  }
+  
+  if (icons.length === 0 && !isDay) {
+    icons.push(<Cloud key="night-clear" className={`${baseClass} anim-float`} />);
+  }
+  
+  return icons;
+};
+
 const getWeatherDesc = (code) => {
   if (code === 0) return 'Clear Sky';
   if (code === 1) return 'Mainly Clear';
@@ -37,6 +66,50 @@ const getWeatherDesc = (code) => {
   return 'Unknown';
 }
 
+const getTonyThoughts = (data, location, clicks) => {
+  if (!data || !data.current || !data.daily) return "Hold on, my circuits are still booting up...";
+  
+  if (clicks === 5) return "Bzzzt! System annoyed. I am on strike. Please consult a window.";
+  if (clicks === 6) return "I said I'm on strike! Stop poking the metal.";
+  if (clicks === 7) return "Are you just going to keep clicking me all day?";
+  if (clicks >= 8) return "Okay, okay, I surrender! Rebooting system... 🔄";
+
+  const temp = data.current.temperature_2m;
+  const code = data.current.weather_code;
+  const precipProb = data.daily.precipitation_probability_max?.[0] || 0;
+  const windSpeed = data.current.wind_speed_10m;
+  const desc = getWeatherDesc(code).toLowerCase();
+
+  let tempFeels = "mild";
+  if (temp < 10) tempFeels = "freezing my metal bolts off";
+  else if (temp < 20) tempFeels = "a bit chilly";
+  else if (temp < 28) tempFeels = "pretty nice";
+  else tempFeels = "overheating my processors";
+
+  let summary = `It's currently ${tempFeels} and ${desc} in ${location}. `;
+
+  if (precipProb > 60) {
+    summary += "My sensors detect high rain probability. Deploy your umbrella! ";
+  } else if (precipProb > 20) {
+    summary += "There's a slight chance of rain. I'm not waterproof, so I'd be careful. ";
+  } else {
+    summary += "Looks mostly dry. Good for my circuitry! ";
+  }
+
+  if (windSpeed > 40) {
+    summary += "Also, it's super windy. Don't blow away!";
+  } else if (windSpeed > 20) {
+    summary += "A bit breezy today too.";
+  }
+
+  if (clicks === 1) summary = "You poked me! Anyway... " + summary;
+  if (clicks === 2) summary = "Hey! Stop that! " + summary;
+  if (clicks === 3) summary = "Please stop clicking me. " + summary;
+  if (clicks === 4) summary = "I'm warning you... " + summary;
+
+  return summary;
+};
+
 const WeatherEffects = ({ code }) => {
   const elements = [];
   
@@ -44,10 +117,10 @@ const WeatherEffects = ({ code }) => {
     // Rain
     for(let i=0; i<30; i++) {
       elements.push(
-        <div key={i} className="drop" style={{
+        <div key={`rain-${i}`} className="drop" style={{
           left: `${Math.random() * 100}vw`,
           animationDuration: `${0.5 + Math.random()}s`,
-          animationDelay: `${Math.random() * 2}s`
+          animationDelay: `-${Math.random() * 2}s` // Negative delay so it doesn't wait at the top
         }} />
       );
     }
@@ -55,12 +128,12 @@ const WeatherEffects = ({ code }) => {
     // Snow
     for(let i=0; i<50; i++) {
       elements.push(
-        <div key={i} className="flake" style={{
+        <div key={`snow-${i}`} className="flake" style={{
           left: `${Math.random() * 100}vw`,
           width: `${3 + Math.random() * 5}px`,
           height: `${3 + Math.random() * 5}px`,
           animationDuration: `${3 + Math.random() * 3}s`,
-          animationDelay: `${Math.random() * 5}s`
+          animationDelay: `-${Math.random() * 5}s` // Negative delay so it doesn't wait at the top
         }} />
       );
     }
@@ -68,7 +141,7 @@ const WeatherEffects = ({ code }) => {
     // Clouds
     for(let i=0; i<4; i++) {
       elements.push(
-        <div key={i} className="floating-cloud" style={{
+        <div key={`cloud-${i}`} className="floating-cloud" style={{
           top: `${10 + Math.random() * 40}vh`,
           width: `${200 + Math.random() * 300}px`,
           height: `${100 + Math.random() * 100}px`,
@@ -90,29 +163,46 @@ function App() {
   const [weatherData, setWeatherData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [tonyClicks, setTonyClicks] = useState(0);
   
   const [lat, setLat] = useState('29.5829');
   const [lon, setLon] = useState('80.2182');
   const [locationName, setLocationName] = useState('Pithoragarh, Uttarakhand');
   const [searchInput, setSearchInput] = useState('');
 
-  const fetchWeather = async (latitude, longitude) => {
-    setLoading(true);
-    setError(null);
+  const fetchWeather = async (latitude, longitude, silent = false) => {
+    if (!silent) setLoading(true);
+    setIsRefreshing(true);
+    if (!silent) setError(null);
     try {
       const response = await axios.get(`/api/weather?lat=${latitude}&lon=${longitude}`);
       setWeatherData(response.data);
     } catch (err) {
       console.error(err);
-      setError('Failed to load weather data');
+      if (!silent) setError('Failed to load weather data');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
   useEffect(() => {
     fetchWeather(lat, lon);
+    const intervalId = setInterval(() => {
+      fetchWeather(lat, lon, true);
+    }, 10000);
+    return () => clearInterval(intervalId);
   }, [lat, lon]);
+
+  useEffect(() => {
+    if (tonyClicks >= 8) {
+      const timer = setTimeout(() => {
+        setTonyClicks(0);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [tonyClicks]);
 
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -193,9 +283,30 @@ function App() {
           </button>
         </form>
 
-        <div className="glass-panel animate-in delay-1">
+        <div className="glass-panel animate-in delay-1" style={{ padding: '1.25rem', marginBottom: '0.25rem', background: 'linear-gradient(145deg, rgba(167, 139, 250, 0.08), rgba(49, 46, 129, 0.2))', border: '1px solid rgba(167, 139, 250, 0.25)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+            <button 
+              className={`tony-bot ${tonyClicks > 0 ? 'anim-bounce' : ''}`}
+              onClick={() => setTonyClicks(c => c + 1)}
+              style={{ background: 'rgba(167, 139, 250, 0.2)', border: 'none', borderRadius: '50%', padding: '8px', cursor: 'pointer', display: 'flex', transition: 'all 0.2s' }}
+            >
+              <Bot size={24} color={tonyClicks >= 5 ? '#ef4444' : 'var(--accent-color)'} />
+            </button>
+            <span style={{ fontSize: '1rem', fontWeight: 700, background: 'var(--gradient-primary)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>What Tony Thinks</span>
+          </div>
+          <p style={{ fontSize: '0.9rem', lineHeight: '1.5', color: 'var(--text-primary)', fontStyle: 'italic' }}>
+            "{getTonyThoughts(weatherData, locationName, tonyClicks)}"
+          </p>
+        </div>
+
+        <div className="glass-panel animate-in delay-2">
           <div className="header">
-            <div className="title">Current Weather</div>
+            <div className="title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              Current Weather
+              <button onClick={() => fetchWeather(lat, lon, true)} className="refresh-btn">
+                <RefreshCw size={16} className={isRefreshing ? 'anim-spin' : ''} />
+              </button>
+            </div>
             <div className="source-badge">{weatherData?.source}</div>
           </div>
 
@@ -261,11 +372,16 @@ function App() {
               <span className="detail-value">{current?.precipitation} mm</span>
             </div>
         </div>
-
+        </div>
         <div className="glass-panel animate-in delay-3" style={{ padding: '1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
-            <CloudRain size={24} color="var(--accent-color)" className="anim-bounce" />
-            <span style={{ fontSize: '1.2rem', fontWeight: 700 }}>Chance of Rain Today</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <CloudRain size={24} color="var(--accent-color)" className="anim-bounce" />
+              <span style={{ fontSize: '1.2rem', fontWeight: 700 }}>Chance of Rain</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.05)', padding: '0.4rem 0.75rem', borderRadius: '1rem', border: '1px solid var(--glass-border)' }}>
+              {getDetailedWeatherIcons(current?.weather_code, current?.is_day, 'small')}
+            </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
             <div style={{ flex: 1, height: '16px', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
