@@ -110,6 +110,92 @@ const getTonyThoughts = (data, location, clicks) => {
   return summary;
 };
 
+const SUGGESTED_QUESTIONS = [
+  { id: 'more_rain', label: '🌧️ Is more rain coming?' },
+  { id: 'continuous_rain', label: '☔ Continuous rain today?' },
+  { id: 'what_to_wear', label: '👕 What should I wear?' },
+  { id: 'driving_conditions', label: '🚗 Safe to drive?' },
+  { id: 'severe_weather', label: '⚡ Any severe alerts?' }
+];
+
+const getTonyAnswer = (key, data, location) => {
+  if (!data || !data.current) return "I need weather data before I can analyze that!";
+  
+  const current = data.current;
+  const hourly = data.hourly;
+  const temp = current.temperature_2m;
+  const code = current.weather_code;
+  const wind = current.wind_speed_10m;
+
+  let upcomingPrecip = [];
+  if (hourly && hourly.precipitation_probability) {
+    const now = new Date();
+    const currIdx = hourly.time.findIndex(t => new Date(t) >= now);
+    const start = currIdx !== -1 ? currIdx : 0;
+    upcomingPrecip = hourly.precipitation_probability.slice(start, start + 6);
+  }
+
+  const maxUpcomingPrecip = upcomingPrecip.length > 0 ? Math.max(...upcomingPrecip) : (data.daily?.precipitation_probability_max?.[0] || 0);
+
+  if (key === 'more_rain') {
+    if (maxUpcomingPrecip > 50) {
+      return `Yes! Rain probability reaches up to ${maxUpcomingPrecip}% over the next few hours in ${location}. Keep an umbrella ready! ☔`;
+    } else if (maxUpcomingPrecip > 20) {
+      return `There is a slight chance of light scattered rain (around ${maxUpcomingPrecip}%) later, but nothing heavy expected.`;
+    } else {
+      return `Good news! Radar shows minimal rain chance (${maxUpcomingPrecip}%) for the next several hours in ${location}.`;
+    }
+  }
+
+  if (key === 'continuous_rain') {
+    const highRainHours = upcomingPrecip.filter(p => p >= 40).length;
+    if (highRainHours >= 4) {
+      return `Yes, expect steady continuous rain today across multiple hours. Great day for hot tea indoors! ☕`;
+    } else if (highRainHours >= 1) {
+      return `Not non-stop rain, but passing showers! Expect short breaks mixed with occasional rain bursts.`;
+    } else {
+      return `No continuous rain expected today. Conditions remain mostly dry with minor shower chances.`;
+    }
+  }
+
+  if (key === 'what_to_wear') {
+    let clothing = [];
+    if (temp < 12) clothing.push("a heavy coat or jacket");
+    else if (temp < 20) clothing.push("a sweater or light jacket");
+    else clothing.push("light breathable clothing");
+
+    if (code >= 51 && code <= 67) clothing.push("a raincoat & umbrella");
+    else if (code >= 95) clothing.push("waterproof rain gear");
+    else if (maxUpcomingPrecip > 30) clothing.push("an umbrella just in case");
+
+    return `For ${Math.round(temp)}°C weather in ${location}, Tony recommends: ${clothing.join(', ')}! 👔`;
+  }
+
+  if (key === 'driving_conditions') {
+    if (code >= 95 || wind > 45) {
+      return `⚠️ Drive with extreme caution! Heavy weather or strong winds (${wind} km/h) are present. Keep headlights on.`;
+    } else if (code >= 51 && code <= 67) {
+      return `Roads are wet from rain. Maintain extra braking distance and drive carefully! 🚘`;
+    } else {
+      return `Driving conditions look clean and smooth in ${location}. Clear visibility! 🚗`;
+    }
+  }
+
+  if (key === 'severe_weather') {
+    if (code >= 95) {
+      return `⚡ Active Thunderstorm warning! Sudden lightning and gusty winds possible. Stay safe indoors.`;
+    } else if (wind > 50) {
+      return `🌬️ High Wind Warning: Gusts up to ${wind} km/h detected. Watch out for flying debris.`;
+    } else if (code >= 71 && code <= 77) {
+      return `❄️ Snowfall alert active. Watch out for slick icy roads.`;
+    } else {
+      return `✅ No severe weather warnings active for ${location} right now. Systems normal!`;
+    }
+  }
+
+  return "Ask Tony anything about today's weather!";
+};
+
 const WeatherEffects = ({ code }) => {
   const elements = [];
   
@@ -165,6 +251,7 @@ function App() {
   const [error, setError] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [tonyClicks, setTonyClicks] = useState(0);
+  const [selectedQuestion, setSelectedQuestion] = useState(null);
   
   const [lat, setLat] = useState('29.5829');
   const [lon, setLon] = useState('80.2182');
@@ -284,19 +371,42 @@ function App() {
         </form>
 
         <div className="glass-panel animate-in delay-1" style={{ padding: '1.25rem', marginBottom: '0.25rem', background: 'linear-gradient(145deg, rgba(167, 139, 250, 0.08), rgba(49, 46, 129, 0.2))', border: '1px solid rgba(167, 139, 250, 0.25)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-            <button 
-              className={`tony-bot ${tonyClicks > 0 ? 'anim-bounce' : ''}`}
-              onClick={() => setTonyClicks(c => c + 1)}
-              style={{ background: 'rgba(167, 139, 250, 0.2)', border: 'none', borderRadius: '50%', padding: '8px', cursor: 'pointer', display: 'flex', transition: 'all 0.2s' }}
-            >
-              <Bot size={24} color={tonyClicks >= 5 ? '#ef4444' : 'var(--accent-color)'} />
-            </button>
-            <span style={{ fontSize: '1rem', fontWeight: 700, background: 'var(--gradient-primary)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>What Tony Thinks</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <button 
+                className={`tony-bot ${tonyClicks > 0 ? 'anim-bounce' : ''}`}
+                onClick={() => setTonyClicks(c => c + 1)}
+                style={{ background: 'rgba(167, 139, 250, 0.2)', border: 'none', borderRadius: '50%', padding: '8px', cursor: 'pointer', display: 'flex', transition: 'all 0.2s' }}
+              >
+                <Bot size={24} color={tonyClicks >= 5 ? '#ef4444' : 'var(--accent-color)'} />
+              </button>
+              <span style={{ fontSize: '1rem', fontWeight: 700, background: 'var(--gradient-primary)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>What Tony Thinks</span>
+            </div>
+            {selectedQuestion && (
+              <button 
+                onClick={() => setSelectedQuestion(null)}
+                style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '12px', padding: '0.25rem 0.6rem', color: 'var(--text-secondary)', fontSize: '0.72rem', cursor: 'pointer' }}
+              >
+                Clear Q&A
+              </button>
+            )}
           </div>
+          
           <p style={{ fontSize: '0.9rem', lineHeight: '1.5', color: 'var(--text-primary)', fontStyle: 'italic' }}>
-            "{getTonyThoughts(weatherData, locationName, tonyClicks)}"
+            "{selectedQuestion ? getTonyAnswer(selectedQuestion, weatherData, locationName) : getTonyThoughts(weatherData, locationName, tonyClicks)}"
           </p>
+
+          <div className="suggestion-chips">
+            {SUGGESTED_QUESTIONS.map(q => (
+              <button
+                key={q.id}
+                className={`chip-btn ${selectedQuestion === q.id ? 'active' : ''}`}
+                onClick={() => setSelectedQuestion(selectedQuestion === q.id ? null : q.id)}
+              >
+                {q.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="glass-panel animate-in delay-2">
