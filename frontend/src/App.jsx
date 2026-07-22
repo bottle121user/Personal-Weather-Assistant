@@ -118,9 +118,9 @@ const WeatherEffects = ({ code }) => {
     for(let i=0; i<30; i++) {
       elements.push(
         <div key={`rain-${i}`} className="drop" style={{
-          left: `${Math.random() * 100}vw`,
+          left: `${Math.random() * 96}%`,
           animationDuration: `${0.5 + Math.random()}s`,
-          animationDelay: `-${Math.random() * 2}s` // Negative delay so it doesn't wait at the top
+          animationDelay: `-${Math.random() * 2}s`
         }} />
       );
     }
@@ -129,11 +129,11 @@ const WeatherEffects = ({ code }) => {
     for(let i=0; i<50; i++) {
       elements.push(
         <div key={`snow-${i}`} className="flake" style={{
-          left: `${Math.random() * 100}vw`,
+          left: `${Math.random() * 96}%`,
           width: `${3 + Math.random() * 5}px`,
           height: `${3 + Math.random() * 5}px`,
           animationDuration: `${3 + Math.random() * 3}s`,
-          animationDelay: `-${Math.random() * 5}s` // Negative delay so it doesn't wait at the top
+          animationDelay: `-${Math.random() * 5}s`
         }} />
       );
     }
@@ -143,8 +143,8 @@ const WeatherEffects = ({ code }) => {
       elements.push(
         <div key={`cloud-${i}`} className="floating-cloud" style={{
           top: `${10 + Math.random() * 40}vh`,
-          width: `${200 + Math.random() * 300}px`,
-          height: `${100 + Math.random() * 100}px`,
+          width: `${180 + Math.random() * 150}px`,
+          height: `${80 + Math.random() * 60}px`,
           animationDuration: `${30 + Math.random() * 30}s`,
           animationDelay: `-${Math.random() * 30}s`
         }} />
